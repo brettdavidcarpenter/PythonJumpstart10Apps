@@ -1,0 +1,110 @@
+import collections
+import glob
+import os
+
+
+
+SearchResult = collections.namedtuple("SearchResult","file, line, text")
+
+def main():
+    print_header()
+    folder = get_folder_from_user()
+    if not folder:
+        print("Sorry we can't search that location.")
+        return
+
+    text = get_search_text_from_user()
+    if not text:
+        print("we can't search for nothing!")
+
+    matches = search_folders(folder, text)
+    match_count = 0
+    for m in matches:
+        match_count += 1
+        # remove print statements to reduce memory usage
+        print()
+        print(m)
+        print()
+        print('--------- MATCH -------------')
+        print('file: ' + m.file)
+        print('line: {}'.format(m.line))
+        print('match: ' + m.text.strip())
+        print()
+
+    print("Found {:,} matches.".format(match_count))
+
+
+def print_header():
+    print('--------------------------------')
+    print('         FILE SEARCH APP')
+    print('--------------------------------')
+
+
+def get_folder_from_user():
+    # verify folder exists
+    folder = input('What folder do you want to search?')
+    if not folder or not folder.strip():
+        return None
+
+    # verifies directory exists
+    if not os.path.isdir(folder):
+        return None
+    #print(os.path.abspath(folder))
+    return os.path.abspath(folder)
+
+
+def get_search_text_from_user():
+    text = input('What are you searching for[single phrases only')
+    return text.lower()
+
+
+def search_folders(folder, text):
+    """
+    Search through folders using recursion, else search file and add to matches
+    The yield method is used to avoid storing all items in memory at a time.
+    Generator methods like this are especially useful for processing large data
+    """
+    all_matches = []
+    items = glob.glob(os.path.join(folder, '*'))
+    print("\n")
+    print("Oliver: The following files were found in '{}': ".format(folder))
+    print(items)
+   # print("\n")
+
+    for item in items:
+        if os.path.isdir(item):
+            # to search folders as well
+            # all_matches.extend(search_folders(item, text))
+            # this is the same code as:
+            # matches = search_folders(item, text)
+            # all_matches.extend(matches)
+
+            yield from search_folders(item, text)
+        else:
+        # matches = search_file(full_item, text)
+            yield from search_file(item, text)
+        # use of extend to add each match individually
+            #all_matches.extend(matches)
+
+
+    # print("Oliver: Searching '{}' for '{}'".format(folder,text))
+    #return all_matches
+
+
+def search_file(filename, search_text):
+    # matches = []
+    with open(filename, 'r', encoding='utf-8') as fin:
+
+        line_num = 0
+        for line in fin:
+            line_num += 1
+            if line.lower().find(search_text) >= 0:
+                m = SearchResult(line=line_num, file=filename, text=line)
+               # matches.append(line)
+                yield m
+
+       # return matches
+
+
+if __name__ == '__main__':
+    main()
